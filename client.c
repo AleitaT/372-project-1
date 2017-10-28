@@ -15,30 +15,80 @@
 #include <netdb.h>
 
 #define MAX_MSG_SIZE 500 
-#define SERVER_PORT 6666
+#define CHAT_HANDLE_SIZE 10
+
+void chat(int sockfd, char * chatHandle, char * serverAddress);
+void getChatHandle(char * input);
+struct addrinfo * packageConnection(char * input_addr, char * porto);
+int establish(struct addrinfo * server);
+void connection(int sockfd, struct addrinfo * server);
+void handshake(int sockfd, char * clientUserName, char *serverAddress);		
+void clear_input();
+	
+/*********************************************
+ ***************** M A I N *******************
+ ********************************************/
+int main(int argc, char *argv[]){
+	
+	/* Check for appropriate input*/
+	if(argc != 3) {
+		fprintf(stderr, "Usage: $ /chatclient <server address> <port>");
+		exit(1);
+	}
+	/* Prepare and receive user chat handle username */
+	char clientUserName[10];		
+	getChatHandle(clientUserName);
+	
+	struct addrinfo * server = packageConnection(argv[1], argv[2]);
+	int sockfd = establish(server);
+	connection(sockfd, server);
+
+	char serverAddress[10];
+	handshake(sockfd, clientUserName, serverAddress);
+	chat(sockfd, clientUserName, serverAddress);
+
+	freeaddrinfo(server); // from man pages
+}
 
 /************************************************
  * For handling username
- * *********************************************/
+ * accept a pointer to buffer for character input 
+ * Clears input if needs to take new name 
+* *********************************************/
 void getChatHandle(char * input) {
-	printf("Please enter a 10 character chat handle: ");
-	scanf("%s", input);
+		printf("Please enter a 10 character chat handle: ");
+		scanf("%s", input);
+		// strings to long, try again. 
+	 	if((strlen(input) > 10)) {
+			clear_input(); // clear input so we don't end up with first name
+			getChatHandle(input);
+		}
 }
-
+/***************************************************
+ * Just a little helper function for clearing
+ * referenced: https://stackoverflow.com/questions/31633005/validate-the-type-of-input-in-a-do-while-loop-c
+ * ***********************************************/
+void clear_input() {
+	char c;
+	while((c = getchar()) != '\n' && c != EOF);
+}
 
 /***********************************************
  * PACKAGE SOCKET INFORMATION FOR CONEXX
+ * Referenced man pages also: 
+ * http://man7.org/linux/man-pages/man3/getaddrinfo.3.html
+ * http://pubs.opengroup.org/onlinepubs/009695399/functions/gai_strerror.html
  * *********************************************/
-struct addrinfo * create_address_info(char * input_addr, char * port){
+struct addrinfo * packageConnection(char * addressInput, char * porto){
 
 	struct addrinfo serverAddress, *server;
 	int state; // help us track ready status 
 
 	memset(&serverAddress, 0, sizeof serverAddress); // clear address
-	serverAddress.ai_family = AF_INET;
-	serverAddress.ai_socktype = SOCK_STREAM;
+	serverAddress.ai_family = AF_INET; // referneced 344 assignment 4 
+	serverAddress.ai_socktype = SOCK_STREAM; // and the book of course
 	
-	state = getaddrinfo(input_addr, port, &serverAddress, &server);
+	state = getaddrinfo(addressInput, porto, &serverAddress, &server);	
 	if(state != 0){
 		fprintf(stderr, "getaddrinfo error: %s\nPlease check the servername or IP address\n",
 		gai_strerror(state));
@@ -50,9 +100,11 @@ struct addrinfo * create_address_info(char * input_addr, char * port){
 /***********************************************
  * CREATE SOCKET FOR CHAT AWESOME 
  * *********************************************/
-int create_socket(struct addrinfo * server) {
+int establish(struct addrinfo * server) {
+	/* for storing socket creation state */
 	int sockfd;
 	sockfd = socket(server->ai_family, server->ai_socktype, server->ai_protocol);
+	/* Check to see if an error occured */
 	if(sockfd == -1) {
 		fprintf(stderr, "Error in creating socket\n");
 		exit(1);
@@ -60,12 +112,12 @@ int create_socket(struct addrinfo * server) {
 	return sockfd;
 }
 
-
 /***********************************************
  * CONNECT SOCKET FOR CHAT AWESOME
  * *********************************************/
-void connect_socket(int sockfd, struct addrinfo * server) {
-	int state; // for consisting update to state 
+void connection(int sockfd, struct addrinfo * server) {
+	int state; 
+	/* for tracking socket connection state */  
  	state = connect(sockfd, server->ai_addr,server->ai_addrlen);
 	if(state == -1) {
 		fprintf(stderr, "Error in connecting to the socket\n");
@@ -75,10 +127,9 @@ void connect_socket(int sockfd, struct addrinfo * server) {
 
 /************************************************
  * HAND SHAKE 
- *
  * **********************************************/
-void handshake(int sockfd, char * chatHandle, char *serverAddress) {
-	int sendIt = send(sockfd, chatHandle, strlen(chatHandle), 0);
+void handshake(int sockfd, char * clienUserName, char *serverAddress) {
+	int sendIt = send(sockfd, chatHandle, strlen(clientUserName), 0);
 	int recIt = recv(sockfd, serverAddress, 10, 0);
 }
 
@@ -90,8 +141,8 @@ void handshake(int sockfd, char * chatHandle, char *serverAddress) {
  * **********************************************/
 void chat(int sockfd, char * chatHandle, char * serverAddress) {
 	
-	char input[500];
-	char output[500];
+	char input[500]; // check to see trailing characters, may need to adjust
+	char output[500]; // same 
 	
 	memset(input, 0, sizeof(input));
 	memset(output, 0, sizeof(output));
@@ -102,27 +153,21 @@ void chat(int sockfd, char * chatHandle, char * serverAddress) {
 	
 	fgets(input, 500, stdin);
 	
-	while(1){
-		
+	while(1){	
 		/* print chatHandle*/	
 		printf("%s > ", chatHandle);
-		
 		fgets(input, 500, stdin);	
-	
 		if(strcmp(input, "\\quit\n") == 0) {
 				break;
 		}
-			
 		/* send a message */
-		num_bytes_sent = send(sockfd, input, strlen(input), 0);
-			
+		num_bytes_sent = send(sockfd, input, strlen(input), 0);	
 		/* check for byte errors */
 		if(num_bytes_sent == -1) {
 			fprintf(stderr, "ooop!  We've got a byte problem!\n");
 			exit(1);
 		}
 		state = recv(sockfd, output, 500, 0);
-
 		if(state == -1){
 			fprintf(stderr, "Error: Host\n");
 			exit(1);
@@ -136,35 +181,8 @@ void chat(int sockfd, char * chatHandle, char * serverAddress) {
 		}
 		memset(input, 0, sizeof(input));
 		memset(output, 0, sizeof(output));
-		
 	}
 	close(sockfd);
 	printf("Connection ended\n");
 }
-/*********************************************
- ***************** M A I N *******************
- ********************************************/
-int main(int argc, char *argv[]){
-	/* Check for appropriate input*/
-	if(argc != 3) {
-		fprintf(stderr, "Usage: $ /chatclient <server address> <port>");
-		exit(1);
-	}
-	
-	/* Prepare and receive user chat handle username */
-	char chatHandle[10];		
-	getChatHandle(chatHandle);
-	
-	struct addrinfo * server = create_address_info(argv[1], argv[2]);
-	int sockfd = create_socket(server);
-	connect_socket(sockfd, server);
-
-	char serverAddress[10];
-	handshake(sockfd, chatHandle, serverAddress);
-	chat(sockfd, chatHandle, serverAddress);
-
-	freeaddrinfo(server);
-
-}
-
 
