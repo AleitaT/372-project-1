@@ -1,6 +1,6 @@
 # Aleita Train CS 372 Project 1
 
-This is FTP chat client using the sockets api
+This is TCP chat client using the sockets api
 
 ## start server
 	make server port="<PORT#>"
