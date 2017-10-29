@@ -7,6 +7,8 @@ This is TCP chat client using the sockets api
 
 Where <PORT#> is replaced with a port number. 
 Suggested port range between 40000 - 60000
+	
+	exmaple: $ make server port="4000"
 
 ## compile client 
 	make client 
@@ -16,6 +18,8 @@ Suggested port range between 40000 - 60000
 
 Where hostname should be hostname that server is running on. 
 Where port number should be the same port number that server is running on. 
+	
+	example: ./chatclient flip3.engr.oregonstate.edu 4000
 
 ## to quit once running
 	>  \quit
