@@ -14,9 +14,6 @@
 #include <stdlib.h>
 #include <netdb.h>
 
-#define MAX_MSG_SIZE 500 
-#define CHAT_HANDLE_SIZE 10
-
 void chat(int sockfd, char * clientUserName, char * serverAddress);
 void getChatHandle(char * input);
 struct addrinfo * packageConnection(char * addressInput, char * porto);
@@ -141,8 +138,8 @@ void handshake(int sockfd, char * clientUserName, char *serverAddress) {
  * **********************************************/
 void chat(int sockfd, char * clientUserName, char * serverAddress) {
 	
-	char input[500]; // check to see trailing characters, may need to adjust
-	char output[500]; // same 
+	char input[503]; // check to see trailing characters, may need to adjust
+	char output[501]; // tested and adjusted 
 	
 	memset(input, 0, sizeof(input));
 	memset(output, 0, sizeof(output));
@@ -156,29 +153,31 @@ void chat(int sockfd, char * clientUserName, char * serverAddress) {
 	while(1){	
 		/* print client user name before message input*/	
 		printf("%s > ", clientUserName);
-		fgets(input, 500, stdin);	
+		fgets(input, 502, stdin);	
+
 		if(strcmp(input, "\\quit\n") == 0) {
-				break;
+				exit(1);
 		}
-		/* send a message */
+
+		/* send a message	and check for byte errors */
 		bytesSent = send(sockfd, input, strlen(input), 0);	
-		/* check for byte errors */
 		if(bytesSent == -1) {
 			fprintf(stderr, "ooop!  We've got a byte problem!\n");
 			exit(1);
 		}
+
 		state = recv(sockfd, output, 500, 0);
-		if(state == -1){
-			fprintf(stderr, "Error: Host\n");
-			exit(1);
+		switch(state){
+			case -1 :
+				fprintf(stderr, "Error: bad receive.\n");
+				exit(1);		
+			case 0 :
+				printf("Connection closed by server\n");
+				exit(1);			
+			default: 
+				printf("%s > %s\n", serverAddress, output);
 		}
-		else if (state == 0) {
-			printf("Connection closed by server\n");
-			break;
-		}	
-		else {
-			printf("%s > %s\n", serverAddress, output);
-		}
+
 		memset(input, 0, sizeof(input));
 		memset(output, 0, sizeof(output));
 	}
