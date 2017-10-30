@@ -17,6 +17,7 @@ Now we can run the python server with the following command including a specifie
 Where port is the number of the port you would like to communicate on.  
 
 EXMPLE: 
+	
 	$ ./server 55667
 
 ## compile client 
@@ -33,6 +34,7 @@ Where hostname should be hostname that server is running on.
 Where port number should be the same port number that server is running on. 
 	
 EXAMPLE:
+	
 	./chatclient flip3.engr.oregonstate.edu 4000
 
 ## to quit once running
