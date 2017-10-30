@@ -1,7 +1,7 @@
 .PHONY: client server
 
 server:
-	python server.py ${port}
+	chmod +x server
 
 client: 
 	cc -o chatclient chatclient.c
