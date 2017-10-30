@@ -96,7 +96,9 @@ struct addrinfo * packageConnection(char * addressInput, char * porto){
 
 /***********************************************
  * CREATE SOCKET FOR CHAT AWESOME 
- * *********************************************/
+ * creates a connection we can connect to 
+ * accepts points to server struct 
+* *********************************************/
 int establish(struct addrinfo * server) {
 	/* for storing socket creation state */
 	int sockfd;
@@ -111,13 +113,15 @@ int establish(struct addrinfo * server) {
 
 /***********************************************
  * CONNECT SOCKET FOR CHAT AWESOME
+ * uses the established connection to make a connection
+ * creates a variable for maintaining connection state
  * *********************************************/
 void connection(int sockfd, struct addrinfo * server) {
 	int state; 
 	/* for tracking socket connection state */  
  	state = connect(sockfd, server->ai_addr,server->ai_addrlen);
 	if(state == -1) {
-		fprintf(stderr, "Error in connecting to the socket\n");
+		fprintf(stderr, "Error: socket connection.\n");
 		exit(1);
 	}
 }
@@ -172,16 +176,16 @@ void chat(int sockfd, char * clientUserName, char * serverAddress) {
 				fprintf(stderr, "Error: bad receive.\n");
 				exit(1);		
 			case 0 :
-				printf("Connection closed by server\n");
+				printf("Msg: Connection closed by server\n");
 				exit(1);			
 			default: 
 				printf("%s > %s\n", serverAddress, output);
 		}
-
+		// recover input
 		memset(input, 0, sizeof(input));
 		memset(output, 0, sizeof(output));
 	}
 	close(sockfd);
-	printf("Connection ended\n");
+	printf("Msg: Connection ended\n");
 }
 
